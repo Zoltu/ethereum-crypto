@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"rootDir": "source",
+		"noEmit": true,
+		"strict": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"lib": [ "es2018", "esnext.bigint" ],
+		"typeRoots": [
+			"./node_modules/@types",
+			"./source/typings",
+		]
+	},
+	"include": [
+		"source/**/*.ts",
+	],
+}
