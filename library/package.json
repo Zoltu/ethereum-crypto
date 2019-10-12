@@ -1,6 +1,6 @@
 {
 	"name": "@zoltu/ethereum-crypto",
-	"version": "1.0.1",
+	"version": "2.0.0",
 	"description": "No dependency crypto library for Ethereum. Only contains things not part of WebCrypto standard.  Uses native ES bigint.",
 	"repository": {
 		"url": "https://github.com/Zoltu/ethereum-crypto"
@@ -11,9 +11,9 @@
 	"dependencies": {},
 	"devDependencies": {
 		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
-		"ts-node": "8.3.0",
+		"ts-node": "8.4.1",
 		"ttypescript": "1.5.7",
-		"typescript": "3.6.2"
+		"typescript": "3.6.4"
 	},
 	"scripts": {
 		"build": "ttsc --project tsconfig-es.json && tsc --project tsconfig-node.json",

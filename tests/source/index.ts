@@ -606,6 +606,13 @@ describe('ethereum', () => {
 		const actual = await ethereum.functionSignatureToSelector(signature)
 		expect(actual).toEqual(expected)
 	})
+	it('private key to address', async () => {
+		const privateKey = 0xfae42052f82bed612a724fec3632f325f377120592c75bb78adfcceae6470c5an
+		const expected = 0x913da4198e6be1d5f5e4a40d0667f70c0b5430ebn
+		const publicKey = await secp256k1.privateKeyToPublicKey(privateKey)
+		const address = await ethereum.publicKeyToAddress(publicKey)
+		expect(address).toEqual(expected)
+	})
 })
 
 describe('sandbox', () => {

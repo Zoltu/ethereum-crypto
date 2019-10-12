@@ -1,6 +1,5 @@
 import * as secp256k1 from './secp256k1'
 import * as keccak256 from './keccak256'
-import { bigintToBytes } from './utilities'
 
 /**
  * Derives an Ethereum address from a secp256k1 public key point.
@@ -8,10 +7,10 @@ import { bigintToBytes } from './utilities'
  * @param publicKey A secp256k1 public key point.
  * @returns An Ethereum address, as a 20-byte Uint8Array.
  */
-export async function publicKeyToAddress(publicKey: secp256k1.AffinePoint): Promise<Uint8Array & {length:20}> {
+export async function publicKeyToAddress(publicKey: secp256k1.AffinePoint): Promise<bigint> {
 	const encodedPublicKey = secp256k1.encodePoint(publicKey)
 	const hashedPublicKey = await keccak256.hash(encodedPublicKey.subarray(1, 65))
-	return bigintToBytes(hashedPublicKey, 32).subarray(12, 32) as Uint8Array & {length:20}
+	return hashedPublicKey & 0xffffffffffffffffffffffffffffffffffffffffn
 }
 
 /**
