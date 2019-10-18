@@ -14,6 +14,38 @@ export async function publicKeyToAddress(publicKey: secp256k1.AffinePoint): Prom
 }
 
 /**
+ * Turns an Ethereum address into a string, including lower/upper case for checksum information encoding.
+ * @param address An Ethereum address as a bigint.
+ * @returns An Ethereum address as a checksummed string.
+ */
+export async function addressToChecksummedString(address: bigint): Promise<string> {
+	const addresString = address.toString(16)
+	const addressHash = await keccak256.hash(new TextEncoder().encode(addresString))
+	let result = ''
+	for (let i = 0; i < addresString.length; ++i) {
+		const character = addresString[i]
+		const isLetter = /[a-fA-F]/.test(character)
+		const checksumBit = addressHash & (2n**(255n - 4n * BigInt(i)))
+		if (isLetter && checksumBit) result += character.toUpperCase()
+		else result += character.toLowerCase()
+	}
+	return result
+}
+
+/**
+ * Validates that a hex string address is valid per checksum check.
+ * @param addressString Address as a hex string, with checksum casing encoded in it.
+ * @returns True if the address is valid, false otherwise.
+ */
+export async function validateAddressChecksum(addressString: string): Promise<boolean> {
+	addressString = addressString.startsWith('0x') ? addressString : `0x${addressString}`
+	if (!/0x[a-fA-F0-9]{40}/.test(addressString)) return false
+	const addressBigint = BigInt(addressString)
+	const checksummedAddress = await addressToChecksummedString(addressBigint)
+	return (checksummedAddress === addressString.slice(2))
+}
+
+/**
  * Signs the keccak256 hash of `message` using `privateKey`.
  * @param privateKey The private key used to sign `message` with.
  * @param message The message to be signed.  This can be either a string, which will be UTF-8 encoded, or a byte array.

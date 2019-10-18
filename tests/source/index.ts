@@ -613,6 +613,162 @@ describe('ethereum', () => {
 		const address = await ethereum.publicKeyToAddress(publicKey)
 		expect(address).toEqual(expected)
 	})
+	describe('addressToChecksummedString', () => {
+		it('all caps 1', async () => {
+			const expected = '52908400098527886E0F7030069857D2E4169EE7'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('all caps 2', async () => {
+			const expected = '8617E340B3D01FA5F11F306F4090FD50E238070D'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('all lower 1', async () => {
+			const expected = 'de709f2102306220921060314715629080e2fb77'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('all lower 2', async () => {
+			const expected = '27b1fdb04752bbc536007a920d24acb045561c26'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('mixed 1', async () => {
+			const expected = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('mixed 2', async () => {
+			const expected = 'fB6916095ca1df60bB79Ce92cE3Ea74c37c5d359'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('mixed 3', async () => {
+			const expected = 'dbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+		it('mixed 4', async () => {
+			const expected = 'D1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb'
+			const input = BigInt(`0x${expected}`)
+			const actual = await ethereum.addressToChecksummedString(input)
+			expect(actual).toEqual(expected)
+		})
+	})
+	describe('validateAddressChecksum', () => {
+		describe('valid', () => {
+			it('all caps 1', async () => {
+				const expected = '52908400098527886E0F7030069857D2E4169EE7'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('all caps 2', async () => {
+				const expected = '8617E340B3D01FA5F11F306F4090FD50E238070D'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('all lower 1', async () => {
+				const expected = 'de709f2102306220921060314715629080e2fb77'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('all lower 2', async () => {
+				const expected = '27b1fdb04752bbc536007a920d24acb045561c26'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('mixed 1', async () => {
+				const expected = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('mixed 2', async () => {
+				const expected = 'fB6916095ca1df60bB79Ce92cE3Ea74c37c5d359'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('mixed 3', async () => {
+				const expected = 'dbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('mixed 4', async () => {
+				const expected = 'D1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+			it('with 0x prefix', async () => {
+				const expected = '0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb'
+				const isValid = await ethereum.validateAddressChecksum(expected)
+				expect(isValid).toEqual(true)
+			})
+		})
+		describe('invalid', () => {
+			it('non-hex character', async () => {
+				const value = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeg'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('too long', async () => {
+				const value = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed0'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('too short', async () => {
+				const value = '5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAe'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('all caps 1', async () => {
+				const value = '52908400098527886E0F7030069857D2E4169Ee7'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('all caps 2', async () => {
+				const value = '8617E340B3D01FA5f11F306F4090FD50E238070D'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('all lower 1', async () => {
+				const value = 'De709f2102306220921060314715629080e2fb77'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('all lower 2', async () => {
+				const value = '27b1Fdb04752bbc536007a920d24acb045561c26'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('mixed 1', async () => {
+				const value = '5aAeB6053F3E94C9b9A09f33669435E7Ef1BeAed'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('mixed 2', async () => {
+				const value = 'fB6916095ca1df60bb79Ce92cE3Ea74c37c5d359'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('mixed 3', async () => {
+				const value = 'dbF03B407c01E7cd3CBea99509d93f8DDDC8C6FB'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+			it('mixed 4', async () => {
+				const value = 'D1220A0cf47c7B9Be7A2E6BA89F429762e7B9ADb'
+				const isValid = await ethereum.validateAddressChecksum(value)
+				expect(isValid).toEqual(false)
+			})
+		})
+	})
 })
 
 describe('sandbox', () => {

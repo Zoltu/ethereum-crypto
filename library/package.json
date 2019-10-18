@@ -1,6 +1,6 @@
 {
 	"name": "@zoltu/ethereum-crypto",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "No dependency crypto library for Ethereum. Only contains things not part of WebCrypto standard.  Uses native ES bigint.",
 	"repository": {
 		"url": "https://github.com/Zoltu/ethereum-crypto"
