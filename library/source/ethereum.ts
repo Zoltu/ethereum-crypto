@@ -19,7 +19,7 @@ export async function publicKeyToAddress(publicKey: secp256k1.AffinePoint): Prom
  * @returns An Ethereum address as a checksummed string.
  */
 export async function addressToChecksummedString(address: bigint): Promise<string> {
-	const addresString = address.toString(16)
+	const addresString = address.toString(16).padStart(40, '0')
 	const addressHash = await keccak256.hash(new TextEncoder().encode(addresString))
 	let result = ''
 	for (let i = 0; i < addresString.length; ++i) {
