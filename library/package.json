@@ -1,13 +1,16 @@
 {
 	"name": "@zoltu/ethereum-crypto",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"description": "No dependency crypto library for Ethereum. Only contains things not part of WebCrypto standard.  Uses native ES bigint.",
 	"repository": {
 		"url": "https://github.com/Zoltu/ethereum-crypto"
 	},
 	"license": "Unlicense",
-	"main": "output-node/index.js",
-	"module": "output-es/index.js",
+	"main": "./output-cjs/index.js",
+	"exports": {
+		"import": "./output-es/index.js",
+		"require": "./output-cjs/index.js"
+	},
 	"dependencies": {},
 	"devDependencies": {
 		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
@@ -16,7 +19,7 @@
 		"typescript": "3.6.4"
 	},
 	"scripts": {
-		"build": "ttsc --project tsconfig-es.json && tsc --project tsconfig-node.json",
+		"build": "ttsc --project tsconfig-es.json && tsc --project tsconfig-cjs.json",
 		"prepublishOnly": "node --eval \"require('fs').copyFile('../README.md', 'README.md', error => {if(error) throw error})\"",
 		"postpublish": "node --eval \"require('fs').unlink('README.md', error => {if(error) throw error})\""
 	},

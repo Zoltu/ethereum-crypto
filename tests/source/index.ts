@@ -4,8 +4,7 @@ const jasmine = new Jasmine({})
 import { mnemonic, secp256k1, keccak256, hdWallet, ethereum } from '@zoltu/ethereum-crypto'
 import { Crypto } from '@peculiar/webcrypto'
 import * as Base58 from 'base-58'
-import { TextEncoder } from 'util';
-import { bytesToBigint, bigintToBytes } from '@zoltu/ethereum-crypto/output-node/utilities';
+import { TextEncoder } from 'util'
 (global as any).crypto = new Crypto()
 
 describe('mnemonic', () => {
@@ -788,3 +787,25 @@ describe('sandbox', () => {
 })
 
 jasmine.execute()
+
+export function bytesToBigint<L extends number>(array: ArrayLike<number> & {length:L}): bigint {
+	let result = 0n
+	for (let i = 0; i < array.length; ++i) {
+		const shiftAmount = BigInt((array.length - 1 - i) * 8)
+		const byte = BigInt(array[i])
+		result |= byte << shiftAmount
+	}
+	return result
+}
+
+export function bigintToBytes<L extends number>(value: bigint, numberOfBytes: L): Uint8Array & {length:L} {
+	if (value >= 2n**BigInt(numberOfBytes * 8)) throw new Error(`Cannot encode ${value} in ${numberOfBytes} bytes.`)
+	if (value < 0) throw new Error(`This function cannot encode a negative number (${value}).`)
+	const result = new Uint8Array(numberOfBytes)
+	for (let i = 0; i < numberOfBytes; ++i) {
+		const shiftAmount = BigInt((numberOfBytes - 1 - i) * 8)
+		const byte = Number((value >> shiftAmount) & 0xffn)
+		result[i] = byte
+	}
+	return result as Uint8Array & {length:L}
+}
