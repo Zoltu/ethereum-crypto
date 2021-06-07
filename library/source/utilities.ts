@@ -76,6 +76,22 @@ export function modularMultiplicitiveInverse(base: bigint, fieldModulus: bigint)
 	return result
 }
 
+export function modularPower(base: bigint, exponent: bigint, modulus: bigint) {
+	let result = 1n
+	base = base % modulus
+	while (exponent > 0) {
+		if (exponent % 2n == 1n)
+			result = (result * base) % modulus
+		exponent = exponent >> 1n
+		base = (base * base) % modulus
+	}
+	return result
+}
+
+export function modularGreatestCommonDenominator(a: bigint, b: bigint): bigint {
+	return (b == 0n) ? a : modularGreatestCommonDenominator(b, a % b)
+}
+
 export function getFirstBits(data: Uint8Array, numberOfBits: number): Array<boolean> {
 	if (numberOfBits > 32) throw new Error(`Can only strip off up to the first 32 bits.`)
 	const result = new Array<boolean>()
@@ -106,4 +122,64 @@ export function bitArrayToNumber(data: Array<boolean>): number {
 		result = result ^ Number(data[i]) << (data.length - i - 1)
 	}
 	return result
+}
+
+export function modularHasPerfectSquareRoot(value: bigint, modulus: bigint) {
+	if (value === 0n) throw new Error(`value cannot be 0`)
+	// technically this can work for values greater than or equal to modulus, but we would need to deal with value % modulus == 0 then
+	if (value >= modulus) throw new Error(`value (${value}) >= modulus (${modulus})`)
+	const legendreSymbol = modularPower(value, (modulus - 1n) / 2n, modulus)
+	// legendareSymbol will always be -1 or 1 here (0 is not possible because we don't allow value >= modulus)
+	return legendreSymbol === 1n ? true : false
+}
+
+/**
+ *
+ * @param value Must be less modulus and greater than 0.
+ * @param modulus Must be prime.
+ * @returns A tuple containing the two roots,
+ */
+export function modularTryFindPerfectSquareRoot(value: bigint, modulus: bigint) {
+	if (value === 0n) return undefined
+	if (!modularHasPerfectSquareRoot(value, modulus)) return undefined
+	if (modulus === 2n) return undefined
+	if (modulus % 4n === 3n) {
+		const result = modularPower(value, (modulus + 1n) / 4n, modulus)
+		return (result > modulus / 2n) ? [result, modulus - result] as const : [modulus - result, result] as const
+	}
+
+	// reduce powers of 2 from modulus-1 to find our starting exponents
+	// TODO: figure out some better names for these variables, these absolutely suck
+	let s = modulus - 1n
+	let exponent = 0n
+	while (s % 2n === 0n) {
+		s /= 2n
+		exponent += 1n
+	}
+
+	// find a value that that has a perfect square root of modulus
+	// TODO: cache this, or take it as a parameter since it is constant for a given modulus
+	let smallestWithoutPerfectSquare = 2n
+	while (modularHasPerfectSquareRoot(smallestWithoutPerfectSquare++, modulus)) {}
+
+	// Tonelli-Shanks
+	let currentGuess = modularPower(value, (s + 1n) / 2n, modulus)
+	let fudgeFactor = modularPower(value, s, modulus)
+	let g = modularPower(smallestWithoutPerfectSquare, s, modulus)
+
+	while (true) {
+		if (fudgeFactor === 1n) return (currentGuess > modulus / 2n) ? [currentGuess, modulus - currentGuess] as const : [modulus - currentGuess, currentGuess] as const
+		let tempFudgeFactor = fudgeFactor
+		let i = 0
+		for (; i < exponent; ++i) {
+			if (tempFudgeFactor === 1n) break
+			tempFudgeFactor = modularPower(tempFudgeFactor, 2n, modulus)
+		}
+		// TODO: find a better name for this variable
+		const gs = modularPower(g, 2n**(exponent - BigInt(i) - 1n), modulus)
+		g = (gs * gs) % modulus
+		currentGuess = (currentGuess * gs) % modulus
+		fudgeFactor = (fudgeFactor * g) % modulus
+		exponent = BigInt(i)
+	}
 }

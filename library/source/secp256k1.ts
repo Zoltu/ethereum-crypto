@@ -1,4 +1,4 @@
-import { bigintToBytes, modularMultiplicitiveInverse, bytesToBigint } from './utilities'
+import { bigintToBytes, modularMultiplicitiveInverse, bytesToBigint, modularTryFindPerfectSquareRoot } from './utilities'
 
 export interface AffinePoint {
 	/** [0, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f) */
@@ -25,7 +25,8 @@ export interface Signature {
 }
 
 export const fieldModulus = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn as const
-// const b = 7n
+const a = 0n
+const b = 7n
 export const basePoint: JacobianPoint = {
 	x: 55066263022277343669578718895168534326250603453777594175500187360389116729240n,
 	y: 32670510020758816978083085130507043184471273380659243275938904335757337482424n,
@@ -91,6 +92,13 @@ export function decodePoint(encoded: ArrayLike<number> & { length: 65 }): Jacobi
 	return affineToJacobian({ x, y })
 }
 
+export function decompressPoint(x: bigint, recoveryParameter: 0|1) {
+	const maybeY= modularTryFindPerfectSquareRoot(normalizeScalarInField(x**3n + a*x + b), fieldModulus)
+	if (maybeY === undefined) throw new Error(`Invalid signature: not a valid point on curve`)
+	const y = (recoveryParameter === Number(maybeY[0] % 2n)) ? maybeY[0] : maybeY[1]
+	return y
+}
+
 /**
  * Sign {messageHash} with {privateKey}.  {messageHash} is usually the output of a hashing function (e.g., keccak256) run against some data that you wish to sign.
  * @param privateKey The private key you wish to sign with.  Usually a randomly generated 256-bit number.  Note that the valid range of values is actually constrained to (0, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141)
@@ -99,26 +107,22 @@ export function decodePoint(encoded: ArrayLike<number> & { length: 65 }): Jacobi
 export async function sign(privateKey: bigint, messageHash: bigint): Promise<Signature> {
 	validateMessageHash(messageHash)
 	validatePrivateKey(privateKey)
-	let r = 0n
-	let s = 0n
-	let recoveryParameter: 0|1 = 0
-	let nonce = 0n
-	while (r === 0n || s === 0n) {
-		nonce = await generateDeterministicSigningNonce(privateKey, messageHash)
+	async function signInternal(noncesToSkip: number): Promise<Signature> {
+		const nonce = await generateDeterministicSigningNonce(privateKey, messageHash, noncesToSkip)
 		const point = jacobianToAffine(pointMultiply(basePoint, nonce))
 		// ethereum specific case, in bitcoin `r = point.x % basePointOrder` and point.x being larger than basePointOrder is encoded as part of the `recoveryParameter`.
-		if (point.x >= basePointOrder) continue
-		r = point.x
-		s = modularMultiplicitiveInverse(nonce, basePointOrder) * (messageHash + r * privateKey) % basePointOrder
-		let yIsOdd = !!(point.y % 2n)
+		if (point.x >= basePointOrder) return await signInternal(noncesToSkip + 1)
+		const r = point.x
+		const maybeS = modularMultiplicitiveInverse(nonce, basePointOrder) * (messageHash + r * privateKey) % basePointOrder
 		// if there are multiple valid values of s, prefer the smaller one
-		if (s >= basePointOrder / 2n) {
-			s = basePointOrder - s
-			yIsOdd = !yIsOdd // not sure why this is necessary, but it is...
-		}
-		recoveryParameter = Number(yIsOdd) as 0|1
+		const s = maybeS < basePointOrder / 2n ? maybeS : basePointOrder - maybeS
+		// if we ended up using a different `s` then we calculated, then invert the recoveryParameter
+		const recoveryParameter = maybeS < basePointOrder / 2n
+			? point.y % 2n ? 1 : 0 as const
+			: point.y % 2n ? 0 : 1 as const
+		return { r, s, recoveryParameter }
 	}
-	return { r, s, recoveryParameter }
+	return signInternal(0)
 }
 
 /**
@@ -159,7 +163,24 @@ export async function verify(publicKey: JacobianPoint | AffinePoint, messageHash
 	return true
 }
 
-async function generateDeterministicSigningNonce(privateKey: bigint, messageHash: bigint): Promise<bigint> {
+/**
+ * Recover the public key associated with the private key that was used to sign {messageHash} and resulted in {signature}.
+ * @param messageHash The hash of the message that was signed.
+ * @param signature The signature of the message that was signed.
+ */
+export async function recover(messageHash: bigint, signature: Signature): Promise<JacobianPoint & AffinePoint> {
+	const x = normalizeScalarInField(signature.r + BigInt(signature.recoveryParameter) * fieldModulus)
+	if (x >= fieldModulus) throw new Error(`Invalid signature: 'r' (${signature.r}) is out of range`)
+	const y = decompressPoint(x, signature.recoveryParameter)
+	const rInverse = modularMultiplicitiveInverse(signature.r, basePointOrder)
+	const sTimesRInverse = rInverse * signature.s % basePointOrder
+	const negativeMessageTimesRInverse = rInverse * (basePointOrder - messageHash) % basePointOrder
+	const result = pointAdd(pointMultiply(basePoint, negativeMessageTimesRInverse), pointMultiply(affineToJacobian({ x, y }), sTimesRInverse))
+	// we convert to affine and back to jacobian because that will result in getting a public key out that is compatible with both jacobian or affine systems, while the original jacobian key may only be compatible with jacobian stuff
+	return affineToJacobian(jacobianToAffine(normalizePointInField(result)))
+}
+
+async function generateDeterministicSigningNonce(privateKey: bigint, messageHash: bigint, numberToSkip: number): Promise<bigint> {
 	const privateKeyBytes = bigintToBytes(privateKey, 32)
 	const messageHashBytes = bigintToBytes(messageHash, 32)
 	let v = new Uint8Array(32).fill(1) as Uint8Array & {length:32}
@@ -169,10 +190,14 @@ async function generateDeterministicSigningNonce(privateKey: bigint, messageHash
 	k = await hmac(k, [...v, 1,  ...privateKeyBytes, ...messageHashBytes])
 	v = await hmac(k, v)
 
+	let foundCount = 0
 	while (true) {
 		v = await hmac(k, v)
 		const nonce = bytesToBigint(v)
-		if (nonce >= 1n && nonce < basePointOrder) return nonce
+		if (nonce >= 1n && nonce < basePointOrder) {
+			foundCount += 1
+			if (foundCount > numberToSkip) return nonce
+		}
 		k = await hmac(k, [...v, 0])
 		v = await hmac(k, v)
 	}
@@ -197,6 +222,8 @@ function validateMessageHash(messageHash: bigint): void {
 function pointMultiply(point: JacobianPoint, scalar: bigint): JacobianPoint {
 	// https://en.wikipedia.org/wiki/Exponentiation_by_squaring (aka: double-and-add)
 	let result: JacobianPoint = {x: 1n, y: 1n, z: 0n}
+	if (scalar === 0n) return {x: 0n, y: 0n, z: 0n}
+	if (isAtInfinity(point)) return {x: 0n, y: 0n, z: 0n}
 	for (let i = 0n; i < 256n; ++i) {
 		result = pointDouble(result)
 		const bit = !!((scalar >> 255n - i) & 0b1n)
@@ -232,6 +259,7 @@ function pointAdd(first: JacobianPoint, second: JacobianPoint): JacobianPoint {
 }
 
 function pointDouble(point: JacobianPoint): JacobianPoint {
+	// http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
 	const xSquared = point.x * point.x % fieldModulus
 	const ySquared = point.y * point.y % fieldModulus
 	const yQuarted = ySquared * ySquared % fieldModulus
@@ -295,7 +323,7 @@ function normalizeScalarInField(value: bigint): bigint {
 }
 
 /**
- * These are here for reference.  They are nearly the most simple implementation of secp256k1 point add/point multiply functions.  The only optimization they have is that they use double and add for multiplication rather than adding a number 2**256 times in a loop (which is impossible on modern computers).  While they code is not used since using Jacobian coordinates are about 30x faster, I'm leaving it in here for reference in case some future reader wants to understand what is happening under the hood a litle better.
+ * These are here for reference.  They are nearly the most simple implementation of secp256k1 point add/point multiply functions.  The only optimization they have is that they use double and add for multiplication rather than adding a number 2**256 times in a loop (which is impossible on modern computers).  While the code is not used since using Jacobian coordinates are about 30x faster, I'm leaving it in here for reference in case some future reader wants to understand what is happening under the hood a litle better.
  */
 
 // function pointAdd(first: AffinePoint, second: AffinePoint): AffinePoint {

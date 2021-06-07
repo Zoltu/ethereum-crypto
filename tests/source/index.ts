@@ -1,7 +1,7 @@
 import Jasmine = require('jasmine');
 const jasmine = new Jasmine({})
 
-import { mnemonic, secp256k1, keccak256, hdWallet, ethereum } from '@zoltu/ethereum-crypto'
+import { mnemonic, secp256k1, keccak256, hdWallet, ethereum, __utilities } from '@zoltu/ethereum-crypto'
 import { Crypto } from '@peculiar/webcrypto'
 import * as Base58 from 'base-58'
 import { TextEncoder } from 'util'
@@ -456,6 +456,48 @@ describe('secp256k1', () => {
 			expect(valid).toEqual(false)
 		})
 	})
+
+	describe('recover', () => {
+		it('secp256k1-js', async () => {
+			const r = 0xc9861bad8887039fa990d24f2cc7ded1027e79ca1c5033741345c4aeb4b2fbe4n
+			const s = 0x303eee7b176509f6a48d66ec1bf891a2826c04b1a99790a33b96d2606ae75c60n
+			const v = 0
+			const messageHash = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8n
+			const expectedPublicKey = { x: 0x5b75fd5f49e78191a45e1c9438644fe5d065ea98920c63e9eef86e151e99b809n, y: 0x4eef2a826f1e6d13a4dde4e54800e8d282a2089a873072002e0a3a21eae5763an, z: 1n }
+
+			const recoveredPublicKey = await secp256k1.recover(messageHash, { r, s, recoveryParameter: v })
+			expect(recoveredPublicKey).toEqual(expectedPublicKey)
+		})
+		it('1, hello', async () => {
+			const privateKey = 1n
+			const publicKey = await secp256k1.privateKeyToPublicKey(privateKey)
+			const messageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
+			const signature = await secp256k1.sign(privateKey, messageHash)
+			const recoveredPublicKey = await secp256k1.recover(messageHash, signature)
+			expect(recoveredPublicKey).toEqual(publicKey)
+		})
+		it(`biggest key, hello`, async () => {
+			const privateKey = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n - 1n
+			const publicKey = await secp256k1.privateKeyToPublicKey(privateKey)
+			const messageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
+			const signature = await secp256k1.sign(privateKey, messageHash)
+			const recoveredPublicKey = await secp256k1.recover(messageHash, signature)
+			expect(recoveredPublicKey).toEqual(publicKey)
+		})
+		it('throws on invalid signature', async () => {
+			const messageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
+			const signature = { r: 1n, s: 1n, recoveryParameter: 0 } as const
+			expectAsync(secp256k1.recover(messageHash, signature)).toBeRejected()
+		})
+		it('throws on wrong message', async () => {
+			const privateKey = 1n
+			const wrongMessageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
+			const message = new TextEncoder().encode(`goodbye`)
+			const messageHash = await keccak256.hash(message)
+			const signature = await secp256k1.sign(privateKey, messageHash)
+			expectAsync(secp256k1.recover(wrongMessageHash, signature)).toBeRejected()
+		})
+	})
 })
 
 describe('keccak256', () => {
@@ -783,6 +825,45 @@ describe('ethereum', () => {
 
 describe('sandbox', () => {
 	it('sandbox', async () => {
+	})
+})
+
+describe('utilities', () => {
+	describe('modularHasPerfectSquareRoot', () => {
+		{
+			const expected = [true, false]
+			for (let i = 0; i < expected.length; ++i) {
+				it(`${i+1} % ${expected.length + 1}`, () => expect(__utilities.modularHasPerfectSquareRoot(BigInt(i + 1), BigInt(expected.length + 1))).toEqual(expected[i]))
+			}
+		}
+		{
+			const expected = [true, false, false, true]
+			for (let i = 0; i < expected.length; ++i) {
+				it(`${i+1} % ${expected.length + 1}`, () => expect(__utilities.modularHasPerfectSquareRoot(BigInt(i + 1), BigInt(expected.length + 1))).toEqual(expected[i]))
+			}
+		}
+		{
+			const expected = [true, true, false, true, true, false, true, true, true, true, false, false, false, true, false, true, false, true, true, true, false, false, false, false, true, false, false, true, false, false]
+			for (let i = 0; i < expected.length; ++i) {
+				it(`${i+1} % ${expected.length + 1}`, () => expect(__utilities.modularHasPerfectSquareRoot(BigInt(i + 1), BigInt(expected.length + 1))).toEqual(expected[i]))
+			}
+		}
+	})
+
+	describe('modularTryFindPerfectSquareRoot', () => {
+		it('works', () => {
+			expect(__utilities.modularTryFindPerfectSquareRoot(3n, 11n)).toEqual([6n, 5n])
+			expect(__utilities.modularTryFindPerfectSquareRoot(3n, 13n)).toEqual([9n, 4n])
+		})
+	})
+
+	describe('decompress point', () => {
+		it('works', async () => {
+			const x = 41368939038460017089690463593392860417892426308765457203329747030588589193225n
+			const expectedY = 35702972027818625020095973668955176075740885849864829235584237564223564379706n
+			const actualY = secp256k1.decompressPoint(x, 0)
+			expect(actualY).toEqual(expectedY)
+		})
 	})
 })
 
