@@ -169,6 +169,8 @@ export async function verify(publicKey: JacobianPoint | AffinePoint, messageHash
  * @param signature The signature of the message that was signed.
  */
 export async function recover(messageHash: bigint, signature: Signature): Promise<JacobianPoint & AffinePoint> {
+	if (signature.r <= 0 || signature.r > basePointOrder) throw new Error(`Invalid signature: 'r' (${signature.s}) is out of range`)
+	if (signature.s <= 0 || signature.s > basePointOrder) throw new Error(`Invalid signature: 's' (${signature.s}) is out of range`)
 	const x = normalizeScalarInField(signature.r + BigInt(signature.recoveryParameter) * fieldModulus)
 	if (x >= fieldModulus) throw new Error(`Invalid signature: 'r' (${signature.r}) is out of range`)
 	const y = decompressPoint(x, signature.recoveryParameter)

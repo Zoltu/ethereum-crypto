@@ -486,16 +486,8 @@ describe('secp256k1', () => {
 		})
 		it('throws on invalid signature', async () => {
 			const messageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
-			const signature = { r: 1n, s: 1n, recoveryParameter: 0 } as const
-			expectAsync(secp256k1.recover(messageHash, signature)).toBeRejected()
-		})
-		it('throws on wrong message', async () => {
-			const privateKey = 1n
-			const wrongMessageHash = 12910348618308260923200348219926901280687058984330794534952861439530514639560n // UTF-8 encoded 'hello'
-			const message = new TextEncoder().encode(`goodbye`)
-			const messageHash = await keccak256.hash(message)
-			const signature = await secp256k1.sign(privateKey, messageHash)
-			expectAsync(secp256k1.recover(wrongMessageHash, signature)).toBeRejected()
+			const signature = { r: 1n, s: 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd04917c8n, recoveryParameter: 1 } as const
+			await expectAsync(secp256k1.recover(messageHash, signature)).toBeRejected()
 		})
 	})
 })
