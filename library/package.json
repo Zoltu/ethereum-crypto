@@ -10,7 +10,6 @@
 		"import": "./output-esm/index.js",
 		"require": "./output-cjs/index.js"
 	},
-	"dependencies": {},
 	"devDependencies": {
 		"ts-node": "8.4.1",
 		"typescript": "3.6.4"
