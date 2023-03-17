@@ -10,15 +10,12 @@
 		"import": "./output-esm/index.js",
 		"require": "./output-cjs/index.js"
 	},
-	"dependencies": {},
 	"devDependencies": {
-		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
 		"ts-node": "8.4.1",
-		"ttypescript": "1.5.7",
 		"typescript": "3.6.4"
 	},
 	"scripts": {
-		"build": "ttsc --project tsconfig-esm.json && tsc --project tsconfig-cjs.json",
+		"build": "tsc --project tsconfig-esm.json && tsc --project tsconfig-cjs.json",
 		"prepublishOnly": "node --eval \"require('fs').copyFile('../README.md', 'README.md', error => {if(error) throw error})\"",
 		"postpublish": "node --eval \"require('fs').unlink('README.md', error => {if(error) throw error})\""
 	},

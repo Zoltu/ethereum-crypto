@@ -1,5 +1,5 @@
-import * as secp256k1 from './secp256k1'
-import * as keccak256 from './keccak256'
+import * as secp256k1 from './secp256k1.js'
+import * as keccak256 from './keccak256.js'
 
 /**
  * Derives an Ethereum address from a secp256k1 public key point.

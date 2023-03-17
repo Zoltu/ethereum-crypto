@@ -1,5 +1,5 @@
-import { bigintToBytes, bytesToBigint } from './utilities';
-import * as secp256k1 from './secp256k1';
+import { bigintToBytes, bytesToBigint } from './utilities.js'
+import * as secp256k1 from './secp256k1.js'
 
 const masterSeed = new TextEncoder().encode('Bitcoin seed')
 

@@ -1,4 +1,4 @@
-import { bigintToBytes, modularMultiplicitiveInverse, bytesToBigint, modularTryFindPerfectSquareRoot } from './utilities'
+import { bigintToBytes, modularMultiplicitiveInverse, bytesToBigint, modularTryFindPerfectSquareRoot } from './utilities.js'
 
 export interface AffinePoint {
 	/** [0, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f) */
